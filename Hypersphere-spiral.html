@@ -55,11 +55,11 @@
             display: none;
         }
         .layout {
-            width: min(var(--max-width), 100%);
+            width: 100%;
             margin: 0;
             display: grid;
-            grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-            gap: 14px;
+            grid-template-columns: 1fr;
+            gap: 12px;
             align-items: start;
         }
         .main {
@@ -71,23 +71,11 @@
             overflow-wrap: anywhere;
         }
         @media (max-width: 1200px) {
-            .layout {
-                grid-template-columns: 1fr !important;
-                width: 100% !important;
-                gap: 8px;
-                margin: 0;
-            }
-            .sidebar,
-            .main {
-                width: 100% !important;
-            }
+            body { padding: 8px; }
+            .layout { gap: 8px; }
             #visualization-container {
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0;
-            }
-            body {
-                padding: 8px;
+                width: 100%;
+                max-width: 100%;
             }
         }
         h1 {
@@ -110,12 +98,8 @@
         /* Visualization Container for Overlay */
         #visualization-container {
             position: relative;
-            width: clamp(
-                320px,
-                calc(100vw - var(--sidebar-width) - (3 * var(--page-pad)) - 14px),
-                var(--canvas-max)
-            );
-            max-width: none;
+            width: 100%;
+            max-width: 100%;
             aspect-ratio: 1 / 1;
             height: auto;
             margin: 0;
@@ -124,21 +108,19 @@
             border: 1px solid var(--info-border);
             box-shadow: var(--panel-shadow);
         }
-        @media (max-width: 900px) {
-            :root {
-                --page-pad: 8px;
-                --canvas-max: 9999px;
-            }
+        @media (min-width: 1200px) {
             .layout {
-                grid-template-columns: 1fr;
-                width: 100%;
-                gap: 8px;
-                margin: 0;
+                width: min(var(--max-width), 100%);
+                grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+                gap: 14px;
             }
             #visualization-container {
-                width: 100%;
-                max-width: 100%;
-                margin: 0;
+                width: clamp(
+                    320px,
+                    calc(100vw - var(--sidebar-width) - (3 * var(--page-pad)) - 14px),
+                    var(--canvas-max)
+                );
+                max-width: none;
             }
         }
         canvas {
