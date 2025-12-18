@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hypersphere Growth: (2r)ⁿ · 2π · e</title>
+    <style>
+        :root {
+            --bg-color: #111111; /* Very dark, soft gray background */
+            --text-color: #dddddd; /* Light, soft gray text */
+            --accent-color: #aaaaaa; /* Subtle gray accent for headings/controls */
+            --info-bg: #161616; /* Flat panel background */
+            --info-border: #2a2a2a; /* Subtle border */
+            --page-pad: clamp(12px, 2vw, 20px);
+            --panel-radius: 0px;
+            --panel-shadow: none;
+            --max-width: 1560px;
+            --sidebar-width: 340px;
+            --canvas-max: 820px;
+        }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: var(--page-pad);
+            font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background:
+                radial-gradient(1200px circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 55%),
+                var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            display: block;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .thumb body {
+            padding: 0;
+        }
+        .thumb .layout {
+            width: 100%;
+            margin: 0;
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+        .thumb .sidebar {
+            display: none;
+        }
+        .thumb #visualization-container {
+            width: 100vw;
+            max-width: none;
+            border: 0;
+        }
+        .thumb #overlay-controls {
+            display: none;
+        }
+        .layout {
+            width: min(var(--max-width), 100%);
+            margin: 0;
+            display: grid;
+            grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+            gap: 14px;
+            align-items: start;
+        }
+        .main {
+            min-width: 0;
+        }
+        .sidebar {
+            min-width: 0;
+            padding-top: 0;
+            overflow-wrap: anywhere;
+        }
+        @media (max-width: 1060px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+            #visualization-container {
+                width: 100%;
+                max-width: var(--canvas-max);
+            }
+        }
+        h1 {
+            color: var(--accent-color);
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            text-transform: none;
+            margin: 0 0 8px;
+            font-size: 0.98rem;
+            text-wrap: balance;
+            line-height: 1.15;
+        }
+        h3 {
+            color: var(--accent-color);
+            font-weight: 600;
+            margin: 12px 0 8px;
+            font-size: 0.9rem;
+            letter-spacing: 0.2px;
+        }
+        /* Visualization Container for Overlay */
+        #visualization-container {
+            position: relative;
+            width: clamp(
+                320px,
+                calc(100vw - var(--sidebar-width) - (3 * var(--page-pad)) - 14px),
+                var(--canvas-max)
+            );
+            max-width: none;
+            aspect-ratio: 1 / 1;
+            height: auto;
+            margin: 0;
+            border-radius: var(--panel-radius);
+            overflow: hidden;
+            border: 1px solid var(--info-border);
+            box-shadow: var(--panel-shadow);
+        }
+        canvas {
+            display: block;
+            background: #000;
+            width: 100%;
+            height: 100%;
+        }
+        #overlay-controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #color-control {
+            pointer-events: all;
+            position: absolute;
+            top: 82px;
+            left: 16px;
+            right: auto;
+            width: min(420px, calc(100% - 32px));
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 12px;
+            background: rgba(12, 12, 12, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--panel-radius);
+            z-index: 2;
+        }
+        #color-control .label {
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+        #color-control .segmented {
+            display: inline-flex;
+            border: 1px solid var(--info-border);
+            flex: 1;
+            justify-content: space-between;
+        }
+        #color-control .segmented label {
+            font-size: 0.85rem;
+            color: var(--text-color);
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        #color-control .segmented label {
+            flex: 1;
+            text-align: center;
+        }
+        #color-control .segmented label + label {
+            border-left: 1px solid var(--info-border);
+        }
+        #color-control .segmented input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #color-control .segmented input[type="radio"]:checked + span {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        #color-control .segmented span {
+            display: block;
+            padding: 6px 10px;
+        }
+        #color-control .segmented input[type="radio"]:focus-visible + span {
+            outline: 2px solid rgba(170, 170, 170, 0.55);
+            outline-offset: -2px;
+        }
+        @media (max-width: 520px) {
+            #color-control {
+                top: 68px;
+                left: 12px;
+                width: calc(100% - 24px);
+            }
+        }
+        #radius-control {
+            pointer-events: all;
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            transform: none;
+            width: min(420px, calc(100% - 32px));
+            max-width: none;
+            padding: 10px 15px;
+            background: var(--info-bg);
+            border-radius: var(--panel-radius);
+            box-shadow: var(--panel-shadow);
+            border: 1px solid var(--info-border);
+            z-index: 2;
+        }
+        #radius-control,
+        #state-info {
+            background: rgba(12, 12, 12, 0.65);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        #radius-control,
+        #state-info,
+        #color-control {
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+        #radius-display {
+            text-align: center;
+            font-size: 0.98rem;
+            color: var(--accent-color);
+            margin-top: 5px;
+        }
+        #state-info {
+            pointer-events: all;
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            padding: 15px;
+            background: var(--info-bg);
+            border-radius: var(--panel-radius);
+            box-shadow: var(--panel-shadow);
+            border: 1px solid var(--info-border);
+            font-size: 0.85rem;
+            min-width: 250px;
+            z-index: 1;
+        }
+        .info {
+            width: 100%;
+            max-width: none;
+            margin: 0 0 10px;
+            padding: 12px 12px;
+            background: var(--info-bg);
+            border: 1px solid var(--info-border);
+            border-radius: var(--panel-radius);
+            box-shadow: var(--panel-shadow);
+        }
+        .info details {
+            margin: 0;
+        }
+        .info details > summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2px 0 8px;
+        }
+        .info details > summary::-webkit-details-marker {
+            display: none;
+        }
+        .info details > summary::after {
+            content: "▾";
+            opacity: 0.7;
+        }
+        .info details[open] > summary::after {
+            content: "▴";
+        }
+        .sidebar .info {
+            font-size: 0.82rem;
+            line-height: 1.35;
+        }
+        .formula {
+            font-size: 1.1rem;
+            text-align: center;
+            margin: 8px 0 10px;
+            color: var(--accent-color);
+            font-weight: 700;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        .sidebar .formula {
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .sidebar strong {
+            color: #cfcfcf;
+            font-weight: 600;
+        }
+        .sidebar p {
+            margin: 10px 0;
+        }
+        .sidebar ul {
+            margin: 10px 0 0;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin: 4px 0;
+        }
+        .controls-group {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid var(--info-border);
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: var(--info-border);
+            border-radius: 999px;
+            margin: 10px 0;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            background: var(--accent-color);
+            cursor: pointer;
+            box-shadow: 0 0 0 3px rgba(170, 170, 170, 0.15);
+        }
+        input[type="range"]:focus-visible {
+            outline: 2px solid rgba(170, 170, 170, 0.55);
+            outline-offset: 4px;
+        }
+        .color-mode-selector {
+            display: flex;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 0.9em;
+        }
+        .color-mode-selector label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 10px;
+            border: 1px solid var(--info-border);
+            border-radius: 0;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            user-select: none;
+        }
+        .sidebar .color-mode-selector {
+            justify-content: flex-start;
+        }
+        .color-mode-selector input[type="radio"] {
+            accent-color: var(--accent-color);
+            margin: 0;
+        }
+        .color-mode-selector label:hover {
+            background: var(--info-border);
+            color: var(--accent-color);
+        }
+        .color-mode-selector label:focus-within {
+            outline: 2px solid rgba(170, 170, 170, 0.55);
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 520px) {
+            #state-info {
+                left: 12px;
+                right: 12px;
+                bottom: 12px;
+                min-width: 0;
+            }
+            #radius-control {
+                top: 12px;
+                left: 12px;
+                width: calc(100% - 24px);
+            }
+            .info {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="info">
+                <h1>Hypersphere Constructor: Growing from Origin</h1>
+                <div class="formula">(2r)ⁿ · 2π · e</div>
+                <p><strong>The Intuition:</strong></p>
+                <ul>
+                    <li>Hypersphere grows from origin: r = 0 to r</li>
+                    <li>Operations scale as: (2r)³ · 2π · e ≈ 136.6r³</li>
+                    <li>At r=1: 136.6 operations (α⁻¹ ≈ 137)</li>
+                    <li>Each dot = one discrete spacetime interaction (Each dot is a Pole, generated in pairs)</li>
+                    <li>Golden angle distribution ensures uniform coverage (modeling spatial entropy/organization)</li>
+                    <li>Additive growth: dots accumulate, never regenerate</li>
+                    <li><b>⚠️ Looks like a Gaussian/Normal distribution between radius 1 -> 2, patterns start clearly appearing after r=2</b></li>
+                    <br>
+            <div class="info">
+                <details>
+                    <summary>How The Drawing Function Works</summary>
+                    <div style="background: rgba(0, 0, 0, 0.25); padding: 12px; border: 1px solid var(--info-border); border-radius: 0;">
+                        <p><strong>1. The Formula: (2r)³ · 2π · e</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>Total operations from r=0 to r: (2r)³ · 2π · e = 8r³ · 2π · e</li>
+                            <li>At r=1: 8 · 2π · e ≈ 136.6 operations</li>
+                            <li>Operations scale as r³ (concentration of measure in 3D)</li>
+                            <li>Each point i at radius: r = ∛(i / 136.6)</li>
+                        </ul>
+                        
+                        <p><strong>2. Distribution Method (Golden Angle Spiral):</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>Golden angle: φ = π(3 - √5) ≈ 2.4 radians (The geometric manifestation of entropy)</li>
+                            <li>θ (azimuthal): golden angle × pair index (k)</li>
+                            <li>φ (polar): golden angle × pair index (k) × 0.7</li>
+                            <li>Creates uniform quasi-random distribution</li>
+                            <li>Creates a wave-like pattern, a complex resonance inherent to the spiral distribution</li>
+                            <li>Naturally alternates between opposite regions (A and not-A)</li>
+                        </ul>
+                        
+                        <p><strong>3. Physical Interpretation:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>Each dot = one discrete spacetime interaction/operation</li>
+                            <li>Operations accumulate as hypersphere grows (Markovian growth)</li>
+                            <li>At r=1: α⁻¹ = 136.6 ≈ 137 (fine structure constant)</li>
+                            <li>Electromagnetic coupling once per complete hyperspherical closure (Paired-pole generation models the two-body system with a fixed center)</li>
+                            <li>Markovian growth: each operation depends only on current state (e property)</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div id="visualization-container">
+                <canvas id="canvas" width="900" height="900"></canvas>
+                <div id="overlay-controls">
+                    <div id="radius-control">
+                        <input type="range" id="radiusSlider" min="0" max="4" step="0.01" value="1">
+                        <div id="radius-display">Radius: <span id="radiusValue">1.00</span></div>
+                    </div>
+                    <div id="color-control" role="group" aria-label="Color visualization mode">
+                        <div class="label">Color</div>
+                        <div class="segmented">
+                            <label><input type="radio" name="colorMode" value="radial" checked><span>Radial</span></label>
+                            <label><input type="radio" name="colorMode" value="discrete"><span>Pairs</span></label>
+                            <label><input type="radio" name="colorMode" value="opposite"><span>Opposite</span></label>
+                        </div>
+                    </div>
+                    <div id="state-info">
+                        <div id="params"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const isThumb = urlParams.has('thumb');
+        const previewRadiusParam = urlParams.get('r');
+        if (isThumb) document.documentElement.classList.add('thumb');
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        let scale = 200;
+        const points = [];
+let rotationY = 0;
+let rotationX = 0;
+let lastRadius = 0;
+let nextIndex = 0; // Track next point to add
+let colorMode = 'radial'; // Default color mode
+        
+        // Mouse control variables
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        
+        // Get slider elements
+        const slider = document.getElementById('radiusSlider');
+        const radiusDisplay = document.getElementById('radiusValue');
+
+        if (isThumb) {
+            slider.value = previewRadiusParam ?? '3';
+            radiusDisplay.textContent = parseFloat(slider.value).toFixed(2);
+            scale = 110; // pull back zoom further for thumbnail preview
+        }
+        
+        slider.addEventListener('input', () => {
+            radiusDisplay.textContent = parseFloat(slider.value).toFixed(2);
+        });
+        
+        // Color mode selection
+        document.querySelectorAll('input[name="colorMode"]').forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                colorMode = event.target.value;
+            });
+        });
+        
+        // Mouse drag to rotate
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+                
+                rotationY += deltaX * 0.01;
+                rotationX += deltaY * 0.01;
+                
+                // Clamp rotationX to avoid flipping
+                rotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationX));
+                
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+        
+        // Scroll to zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomDelta = e.deltaY > 0 ? -20 : 20;
+            scale = Math.max(50, Math.min(500, scale + zoomDelta));
+        });
+        
+        // Number of operations at radius r: (2r)³ · 2π · e
+        function operationsAtRadius(r) {
+            return Math.pow(2*r, 3) * 2 * Math.PI * Math.E;
+        }
+        
+// Golden angle spiral for BOTH angles - jumps around sphere
+// Naturally visits opposite regions alternately
+function createPoint(index) {
+    if (index === 0) {
+        return {x: 0, y: 0, z: 0, r: 0, index: 0};
+    }
+    
+    // 1. MARKOVIAN GROWTH RADIUS:
+    // The radius 'r' is determined by the total number of operations 'index' (i).
+    // This ensures the point's position is fixed based on the total accumulated 'mass' (i),
+    // reflecting the Markovian growth property (r = ∛(i / C)).
+    const C = 8 * 2 * Math.PI * Math.E;
+    const r = Math.cbrt(index / C);
+    
+    // Golden angle (φ = π(3 - √5)) - models spatial manifestation of entropy/organization
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    
+    // 2. PAIRED-POLE GENERATION:
+    // The index 'k' represents the unique pair index (k=1 for i=1,2; k=2 for i=3,4, etc.).
+    // This enforces the 'paired poles' constraint (like quarks) and the RTBP analogy.
+    const k = Math.ceil(index / 2);
+    
+    // Angular position is determined by the pair index 'k'.
+    const theta = goldenAngle * k; // Azimuthal
+    const phi_param = (goldenAngle * k * 0.7) % (2 * Math.PI); // Polar, different frequency
+    const phi = phi_param; // Use directly
+    
+    let x = r * Math.sin(phi) * Math.cos(theta);
+    let y = r * Math.sin(phi) * Math.sin(theta);
+    let z = r * Math.cos(phi);
+    
+    // 3. OPPOSITE POLE CONSTRAINT:
+    // The second point in the pair (even index) is the exact opposite pole of the first (odd index).
+    // This models the two-body system balancing around the fixed center.
+    if (index % 2 === 0) {
+        x = -x;
+        y = -y;
+        z = -z;
+    }
+    
+    return {
+        x: x,
+        y: y,
+        z: z,
+        r: r,
+        index: index
+    };
+}
+        
+        // 3D projection with rotation
+        function project(point) {
+            // Scale to screen space
+            let x = point.x * scale;
+            let y = point.y * scale;
+            let z = point.z * scale;
+            
+            // Rotate Y
+            let x2 = x * Math.cos(rotationY) - z * Math.sin(rotationY);
+            let z2 = x * Math.sin(rotationY) + z * Math.cos(rotationY);
+            
+            // Rotate X
+            let y2 = y * Math.cos(rotationX) - z2 * Math.sin(rotationX);
+            let z3 = y * Math.sin(rotationX) + z2 * Math.cos(rotationX);
+            
+            // Perspective
+            const perspective = 600 / (600 + z3);
+            return {
+                x: centerX + x2 * perspective,
+                y: centerY + y2 * perspective,
+                z: z3,
+                scale: perspective
+            };
+        }
+        
+        // Draw sphere surface (the bubble)
+        function drawSphereSurface(r) {
+            if (r < 0.01) return;
+            
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            
+            // Draw several circles to show sphere surface
+            const steps = 32;
+            for (let i = 0; i < steps; i++) {
+                const theta = (i / steps) * Math.PI * 2;
+                
+                ctx.beginPath();
+                for (let j = 0; j <= steps; j++) {
+                    const phi = (j / steps) * Math.PI;
+                    const p = project({
+                        x: r * Math.sin(phi) * Math.cos(theta),
+                        y: r * Math.sin(phi) * Math.sin(theta),
+                        z: r * Math.cos(phi)
+                    });
+                    
+                    if (j === 0) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            }
+        }
+        
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw axes
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            const axisLength = 350;
+            const axes = [
+                [{x: -1.5, y: 0, z: 0}, {x: 1.5, y: 0, z: 0}],
+                [{x: 0, y: -1.5, z: 0}, {x: 0, y: 1.5, z: 0}],
+                [{x: 0, y: 0, z: -1.5}, {x: 0, y: 0, z: 1.5}]
+            ];
+            
+            axes.forEach(axis => {
+                const p1 = project(axis[0]);
+                const p2 = project(axis[1]);
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+            });
+            
+            // Get current radius from slider
+            const r = parseFloat(slider.value);
+            const targetOps = Math.floor(operationsAtRadius(r));
+            
+            // Reset if radius decreased
+            if (r < lastRadius - 0.1) {
+                points.length = 0;
+                nextIndex = 0;
+            }
+            
+            // Add new points as needed (they have fixed positions)
+            while (nextIndex < targetOps && nextIndex < 10000) { // Cap at 10k for performance
+                points.push(createPoint(nextIndex));
+                nextIndex++;
+            }
+            
+            lastRadius = r;
+            
+            // Draw the expanding surface (soap bubble)
+            drawSphereSurface(r);
+            
+            const visiblePoints = points.filter(p => p.r <= r);
+            
+            const projected = visiblePoints
+                .map(p => ({
+                    ...project(p),
+                    original: p
+                }))
+                .sort((a, b) => a.z - b.z);
+            
+            projected.forEach(p => {
+                const alpha = Math.min(0.9, p.scale * 1.2);
+                const size = Math.max(1.5, 2 * p.scale);
+                
+                // --- COLORING LOGIC ---
+                let hue, brightness;
+                const k = Math.ceil(p.original.index / 2); // Pair index
+                const colorStep = 45; // 8 distinct colors (360 / 45)
+                
+                if (colorMode === 'radial') {
+                    // 1. Radial Gradient: soft violet → bright red.
+                    const maxRadius = 4;
+                    const radialFraction = p.original.r / maxRadius;
+                    const startHue = 290; // violet
+                    hue = startHue - (radialFraction * startHue); // to red (0)
+                    brightness = 55 + radialFraction * 25; // higher contrast at the surface
+                } else if (colorMode === 'discrete') {
+                    // 2. Discrete Pair Cycle: Shows the clustering of poles generated at the same time step.
+                    hue = (k * colorStep) % 360;
+                    brightness = 60;
+                } else if (colorMode === 'opposite') {
+                    // 3. Opposite Pair Cycle: Shows the two-body balance within each pair.
+                    hue = (k * colorStep) % 360;
+                    
+                    // Shift hue by 180 degrees for the second pole in the pair
+                    if (p.original.index % 2 === 0) {
+                        hue = (hue + 180) % 360;
+                    }
+                    brightness = 60;
+                }
+                
+                ctx.fillStyle = `hsla(${hue}, 100%, ${brightness}%, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Display info
+            const expectedOps = operationsAtRadius(r);
+            const opsAtR1 = operationsAtRadius(1);
+            
+            document.getElementById('params').innerHTML = `
+                <strong>Radius (r):</strong> ${r.toFixed(2)}<br>
+                <br>
+                <strong>Operations at r=${r.toFixed(2)}:</strong> ${expectedOps.toFixed(1)}<br>
+                <strong>Dots visible:</strong> ${visiblePoints.length}<br>
+                <strong>Total dots created:</strong> ${points.length}<br>
+
+            `;
+            
+            if (!isThumb) requestAnimationFrame(draw);
+        }
+        
+        draw();
+    </script>
+</body>
+</html>

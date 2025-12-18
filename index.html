@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hypersphere Visualizations</title>
+  <style>
+    :root {
+      --bg: #111111;
+      --panel: #161616;
+      --border: #2a2a2a;
+      --text: #dddddd;
+      --muted: #aaaaaa;
+      --pad: clamp(12px, 2vw, 20px);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: var(--pad);
+      font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 55%),
+        var(--bg);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: min(1100px, 100%);
+      margin: 0;
+    }
+
+    header {
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 650;
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .grid {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 14px;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .card:focus-visible {
+      outline: 2px solid rgba(170, 170, 170, 0.55);
+      outline-offset: 3px;
+    }
+
+    .thumb {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #000;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .thumb iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      pointer-events: none;
+    }
+
+    .title {
+      font-size: 1rem;
+      font-weight: 650;
+      color: var(--text);
+      margin: 0 0 6px;
+    }
+
+    .desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.92em;
+      color: #cfcfcf;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Hypersphere Visualizations</h1>
+      <p>Click a visualization to open it. (Designed for GitHub Pages.)</p>
+    </header>
+
+    <div class="grid">
+      <a class="card" href="Hypersphere-spiral.html">
+        <div class="thumb" aria-hidden="true">
+          <iframe title="Preview: Golden-Angle Spiral" loading="lazy" src="Hypersphere-spiral.html?thumb=1&r=3"></iframe>
+        </div>
+        <div class="title">Structured Ideal Spiral Growth</div>
+        <div class="desc">Paired poles distributed via a spiral rule, with additive growth from the origin.</div>
+        <div class="meta">
+          <span>File</span>
+          <code>Hypersphere-spiral.html</code>
+        </div>
+      </a>
+
+      <a class="card" href="Hypersphere-brownian.html">
+        <div class="thumb" aria-hidden="true">
+          <iframe title="Preview: Brownian Motion" loading="lazy" src="Hypersphere-brownian.html?thumb=1&r=3"></iframe>
+        </div>
+        <div class="title">Stochastic Distribution Growth</div>
+        <div class="desc">Paired poles via stochastic direction-walk. Creates Gaussian clustering and concentration of measure.</div>
+        <div class="meta">
+          <span>File</span>
+          <code>Hypersphere-brownian.html</code>
+        </div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
