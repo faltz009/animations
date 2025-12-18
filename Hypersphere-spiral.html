@@ -250,6 +250,57 @@
             min-width: 250px;
             z-index: 1;
         }
+        #color-histogram {
+            pointer-events: all;
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px;
+            background: rgba(12, 12, 12, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--panel-radius);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            font-size: 0.85rem;
+            min-width: 280px;
+            z-index: 1;
+        }
+        #color-histogram h4 {
+            margin: 0 0 12px;
+            font-size: 0.9rem;
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        .color-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+        }
+        .color-bar-label {
+            width: 50px;
+            font-size: 0.8rem;
+            color: var(--text-color);
+        }
+        .color-bar-visual {
+            flex: 1;
+            height: 18px;
+            background: var(--info-border);
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+        }
+        .color-bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .color-bar-count {
+            min-width: 50px;
+            text-align: right;
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            font-weight: 600;
+        }
         .info {
             width: 100%;
             max-width: none;
@@ -453,7 +504,7 @@
                 <canvas id="canvas" width="900" height="900"></canvas>
                 <div id="overlay-controls">
                     <div id="radius-control">
-                        <input type="range" id="radiusSlider" min="0" max="4" step="0.01" value="1">
+                        <input type="range" id="radiusSlider" min="0" max="5" step="0.01" value="1">
                         <div id="radius-display">Radius: <span id="radiusValue">1.00</span></div>
                     </div>
                     <div id="color-control" role="group" aria-label="Color visualization mode">
@@ -466,6 +517,55 @@
                     </div>
                     <div id="state-info">
                         <div id="params"></div>
+                    </div>
+                    <div id="color-histogram">
+                        <h4>Color Distribution</h4>
+                        <div class="color-bar">
+                            <div class="color-bar-label">Violet</div>
+                            <div class="color-bar-visual">
+                                <div class="color-bar-fill" id="bar-violet" style="background: hsl(265, 100%, 60%); width: 0%;"></div>
+                            </div>
+                            <div class="color-bar-count" id="count-violet">0</div>
+                        </div>
+                        <div class="color-bar">
+                            <div class="color-bar-label">Blue</div>
+                            <div class="color-bar-visual">
+                                <div class="color-bar-fill" id="bar-blue" style="background: hsl(195, 100%, 60%); width: 0%;"></div>
+                            </div>
+                            <div class="color-bar-count" id="count-blue">0</div>
+                        </div>
+                        <div class="color-bar">
+                            <div class="color-bar-label">Green</div>
+                            <div class="color-bar-visual">
+                                <div class="color-bar-fill" id="bar-green" style="background: hsl(120, 100%, 50%); width: 0%;"></div>
+                            </div>
+                            <div class="color-bar-count" id="count-green">0</div>
+                        </div>
+                        <div class="color-bar">
+                            <div class="color-bar-label">Yellow</div>
+                            <div class="color-bar-visual">
+                                <div class="color-bar-fill" id="bar-yellow" style="background: hsl(75, 100%, 60%); width: 0%;"></div>
+                            </div>
+                            <div class="color-bar-count" id="count-yellow">0</div>
+                        </div>
+                        <div class="color-bar">
+                            <div class="color-bar-label">Orange</div>
+                            <div class="color-bar-visual">
+                                <div class="color-bar-fill" id="bar-orange" style="background: hsl(30, 100%, 60%); width: 0%;"></div>
+                            </div>
+                            <div class="color-bar-count" id="count-orange">0</div>
+                        </div>
+                        <div class="color-bar">
+                            <div class="color-bar-label">Red</div>
+                            <div class="color-bar-visual">
+                                <div class="color-bar-fill" id="bar-red" style="background: hsl(0, 100%, 60%); width: 0%;"></div>
+                            </div>
+                            <div class="color-bar-count" id="count-red">0</div>
+                        </div>
+                        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12);">
+                            <div style="font-size: 0.75rem; color: var(--text-color); margin-bottom: 6px;">Mass distribution</div>
+                            <div id="stacked-bar" style="display: flex; height: 24px; border: 1px solid rgba(255, 255, 255, 0.12); overflow: hidden;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -739,7 +839,7 @@ function createPoint(index) {
             }
             
             // Add new points as needed (they have fixed positions)
-            while (nextIndex < targetOps && nextIndex < 10000) { // Cap at 10k for performance
+            while (nextIndex < targetOps && nextIndex < 20000) { // Cap at 20k for performance
                 points.push(createPoint(nextIndex));
                 nextIndex++;
             }
@@ -750,7 +850,57 @@ function createPoint(index) {
             drawSphereSurface(r);
             
             const visiblePoints = points.filter(p => p.r <= r);
-            
+
+            // Count dots by color range (EQUAL RADIUS BINS: 0.8 each)
+            // Shows concentration of measure - outer shells contain more mass!
+            const maxRadius = 5;
+            const colorCounts = {
+                violet: 0,   // r: 0.0 - 0.8
+                blue: 0,     // r: 0.8 - 1.6
+                green: 0,    // r: 1.6 - 2.4
+                yellow: 0,   // r: 2.4 - 3.2
+                orange: 0,   // r: 3.2 - 4.0
+                red: 0       // r: 4.0 - 5.0
+            };
+
+            visiblePoints.forEach(p => {
+                const pointRadius = p.r;
+                if (pointRadius < 0.8) colorCounts.violet++;
+                else if (pointRadius < 1.6) colorCounts.blue++;
+                else if (pointRadius < 2.4) colorCounts.green++;
+                else if (pointRadius < 3.2) colorCounts.yellow++;
+                else if (pointRadius < 4.0) colorCounts.orange++;
+                else colorCounts.red++;
+            });
+
+            // Update histogram
+            const total = visiblePoints.length;
+            if (total > 0) {
+                const colors = ['violet', 'blue', 'green', 'yellow', 'orange', 'red'];
+                colors.forEach(color => {
+                    const count = colorCounts[color];
+                    const percentage = (count / total) * 100;
+                    document.getElementById(`bar-${color}`).style.width = `${percentage}%`;
+                    document.getElementById(`count-${color}`).textContent = count;
+                });
+
+                // Update stacked bar
+                const stackedBar = document.getElementById('stacked-bar');
+                const colorStyles = {
+                    violet: 'hsl(265, 100%, 60%)',
+                    blue: 'hsl(195, 100%, 60%)',
+                    green: 'hsl(120, 100%, 50%)',
+                    yellow: 'hsl(75, 100%, 60%)',
+                    orange: 'hsl(30, 100%, 60%)',
+                    red: 'hsl(0, 100%, 60%)'
+                };
+
+                stackedBar.innerHTML = colors.map(color => {
+                    const pct = (colorCounts[color] / total) * 100;
+                    return `<div style="width: ${pct}%; background: ${colorStyles[color]}; height: 100%;"></div>`;
+                }).join('');
+            }
+
             const projected = visiblePoints
                 .map(p => ({
                     ...project(p),
@@ -769,7 +919,7 @@ function createPoint(index) {
                 
                 if (colorMode === 'radial') {
                     // 1. Radial Gradient: soft violet → bright red.
-                    const maxRadius = 4;
+                    const maxRadius = 5;
                     const radialFraction = p.original.r / maxRadius;
                     const startHue = 290; // violet
                     hue = startHue - (radialFraction * startHue); // to red (0)
