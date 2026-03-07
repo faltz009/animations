@@ -45,7 +45,9 @@ canvas { display:block; }
 #info::-webkit-scrollbar-track { background:transparent; }
 #info::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:2px; }
 #info hr { border:none; border-top:1px solid rgba(255,255,255,0.08); margin:12px 0; }
+.thumb #ui, .thumb #info, .thumb #infoOpen { display:none !important; }
 </style>
+<script>if(new URLSearchParams(location.search).has('thumb'))document.documentElement.classList.add('thumb');</script>
 </head>
 <body>
 <div id="info">
